@@ -75,12 +75,23 @@ window.onload = function(){
     y2: -canvas.height
   };
   var hero = {
-    x: parseInt(canvas.width/2 - 50),
+    x: Math.floor(canvas.width/2 - 50),
     y: canvas.height - 124,
     speed: 200,
     status: true,
     down: false,
     times: 0
+  };
+  //难度表
+  var difficult = {
+    a: 1,
+    b: 0,
+    c: 0,
+  };
+  //手机拖动偏差
+  var offSet = {
+    x: 0,
+    y: 0,
   };
   //创建运动的对象原型
   var moveObject = {
@@ -88,7 +99,7 @@ window.onload = function(){
     down: false,
     times: 0,
     init: function() {
-      this.x = parseInt(Math.random()*canvas.width - 50);
+      this.x = Math.floor(Math.random()*canvas.width);
       this.y = 0;
     },
     outRange: function() {
@@ -104,38 +115,13 @@ window.onload = function(){
     },
     clear: function() {
       this.inUse = false;
-      this.x = parseInt(Math.random()*550);
+      this.x = Math.floor(Math.random()*550) - 50;
       this.y = 0;
     }
   };
-  //资源池
-  var pool = {
-    get: function() {
-      if (!this.pool[this.size - 1].inUse) {
-        this.pool[this.size - 1].inUse = true;
-        this.pool.unshift(this.pool.pop());
-      }
-    },
-    use: function() {
-      for (var i = 0, j = this.size; i < j; i++) {
-        if (this.pool[i].inUse) {
-          if (this.pool[i].reset()) {
-            this.pool[i].clear();
-            this.pool.push(this.pool.splice(i, 1)[0]);
-            i--;
-            j--;
-          }
-        }
-      }
-    },
-    inUseNum: function () {
-      for (var i = 0, num = 0; i < this.size; i++) if (this.pool[i].inUse) num++;
-      return num
-    },
-  }
   //enemy1的对象
   function Enemy1() {
-    this.life = 1;
+    this.life = 2;
     this.collison = function() {
       if (this.y > hero.y - 36 && this.y < hero.y + 5
         && this.x > hero.x - 14 && this.x < hero.x + 64) {
@@ -146,11 +132,18 @@ window.onload = function(){
         return true
       }
     };
+    this.clear = function() {
+      this.inUse = false;
+      this.x = Math.floor(Math.random()*550);
+      this.y = 0;
+      if (this.x > canvas.width - 50) this.x = canvas.width - 50;
+    };
+    if (this.x > canvas.width - 50) this.x = canvas.width - 50;    
   }
   Enemy1.prototype = moveObject;
   //enemy2的对象
   function Enemy2() {
-    this.life = 5;
+    this.life = 7;
     this.collison = function() {
       if (this.y > hero.y - 88 && this.y < hero.y - 63
         && this.x >= hero.x - 11 && this.x <= hero.x + 42) {
@@ -168,6 +161,13 @@ window.onload = function(){
         return true
       }
     };
+    this.clear = function() {
+      this.inUse = false;
+      this.x = Math.floor(Math.random()*550);
+      this.y = 0;
+      if (this.x > canvas.width - 68) this.x = canvas.width - 68;
+    }
+    if (this.x > canvas.width - 68) this.x = canvas.width - 68;    
   }
   Enemy2.prototype = moveObject;
   //enemy2的对象
@@ -179,21 +179,23 @@ window.onload = function(){
 
 
   var keysDown, 
-      timeline,
+      timeNext,
+      timeInterval,
       headle1,
       headle2,
       headleB,
       together;
-  var time = new Date();
+  var timeStart = new Date();
   var callFlag1 = false;
   var callFlag2 = false;
   var callFlagB = false;
+  var beginMove = false;
   var score = 0;
   //常用数字
   var enemy1Size = 20,
-      enemy1Speed = 50,
+      enemy1Speed = 70,
       enemy2Size = 20,
-      enemy2Speed = 5,
+      enemy2Speed = 50,
       bulletSize = 100,
       bulletSpeed = 200,
       enemy1 = [],
@@ -204,22 +206,22 @@ window.onload = function(){
     //enemy1集合
     for (var i = 0; i < enemy1Size; i++) {
       enemy1[i] = new Enemy1();
-      enemy1[i].x = parseInt(Math.random()*550);
+      enemy1[i].x = Math.floor(Math.random()*550);
       enemy1[i].y = 0;
       enemy1[i].inUse = false;
       enemy1[i].down = false;
       enemy1[i].times = 0;
-      enemy1[i].life = 1;
+      enemy1[i].life = 2;
     };
     //enemy2集合
     for (var i = 0; i < enemy2Size; i++) {
       enemy2[i] = new Enemy2();
-      enemy2[i].x = parseInt(Math.random()*550);
+      enemy2[i].x = Math.floor(Math.random()*550);
       enemy2[i].y = 0;
       enemy2[i].inUse = false;
       enemy2[i].down = false;
       enemy2[i].times = 0;
-      enemy2[i].life = 5;
+      enemy2[i].life = 7;
     };
     //bullets集合
     for (var i = 0; i < bulletSize; i++) {
@@ -227,18 +229,24 @@ window.onload = function(){
       bullets[i].inUse = false;
     };
     hero = {
-      x: parseInt(canvas.width/2 - 50),
+      x: Math.floor(canvas.width/2 - 50),
       y: canvas.height - 124,
       speed: 200,
       status: true,
       down: false,
       times: 0
     };  
-    var background = {
+    background = {
       y1: 0,
       y2: -canvas.height
     };
+    difficult = {
+      a: 1,
+      b: 0,
+      c: 0,
+    };
     score = 0; 
+    timeStart = new Date();
   }
   //监听事件
   window.addEventListener("keydown", function (e) {
@@ -254,6 +262,34 @@ window.onload = function(){
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
   }
+  //开始触摸
+  canvas.addEventListener('touchstart', function(e) {
+      event.preventDefault();
+    e = e.touches[0];
+    if (e.clientX > hero.x && e.clientX < hero.x + 98 
+      && e.clientY > hero.y && e.clientY < hero.y + 124) {
+      beginMove = true;
+      offSet.x = e.clientX - hero.x;
+      offSet.y = e.clientY - hero.y;
+    }
+  });
+  //移动中
+  canvas.addEventListener('touchmove', function(e) {
+    if (beginMove) {
+      event.preventDefault();
+      e = e.touches[0];
+      hero.x = e.clientX - offSet.x;
+      hero.y = e.clientY - offSet.y;
+      if (hero.x < 0) hero.x = 0;
+      if (hero.x > canvas.width - 69) hero.x = canvas.width - 69;
+      if (hero.y < 0) hero.y = 0;
+      if (hero.y > canvas.height - 124) hero.y = canvas.height - 124;
+    }
+  });
+  //拖动结束
+  canvas.addEventListener('touchend', function(e) {
+    beginMove = false;
+  })
   //初始化
   initGame();
   //更新状态
@@ -279,8 +315,16 @@ window.onload = function(){
     };
     if (hero.x > canvas.width - 70) hero.x = canvas.width - 70;
     if (hero.x < 0 ) hero.x = 0;
-    timeline = new Date();
-    together = parseInt(Math.random()*4);
+    if (hero.y < 0) hero.y = 0;
+    if (hero.y > canvas.height - 124) hero.y = canvas.height;
+    timeNext = new Date();
+    timeInterval = (timeNext - timeStart)/1000;
+    difficult.a = Math.floor((timeInterval/4)) + 1;
+    if (difficult.a > 10) difficult.a = 10;
+    difficult.b = Math.floor((timeInterval/8)) - 1;
+    if (difficult.b < 0) difficult.b = 0;
+    if (difficult.b > 5) difficult.b = 5;
+    together =2;
 
     var nowNum1 = 0;
     var nowNum2 = 0;
@@ -304,9 +348,9 @@ window.onload = function(){
       if (enemy1[i].inUse) nowNum1++;
     }
     if (callFlag1 === false) {
-      if (nowNum1 < 2) {
+      if (nowNum1 < difficult.a) {
         headle1 = setInterval (function() {
-          if (2 - nowNum1 > together) {
+          if (difficult.a - nowNum1 > together) {
             for (var i = 0; i < together; i++) {
               if (!enemy1[enemy1Size - 1].inUse) {
                 enemy1[enemy1Size - 1].inUse = true;
@@ -319,11 +363,11 @@ window.onload = function(){
               enemy1.unshift(enemy1.pop());
             }
           }
-        }, parseInt(600));         
+        }, 600);         
         callFlag1 = true;
       };
     };
-    if(nowNum1 >= 2) {
+    if(nowNum1 >= difficult.a) {
       callFlag1 = false;
       clearInterval(headle1);
     };
@@ -347,9 +391,9 @@ window.onload = function(){
       if (enemy2[i].inUse) nowNum2++;
     }
     if (callFlag2 === false) {
-      if (nowNum2 < 2) {
+      if (nowNum2 < difficult.b) {
         headle2 = setInterval (function() {
-          if (2 - nowNum2 > together) {
+          if (difficult.b - nowNum2 > together) {
             for (var i = 0; i < together; i++) {
               if (!enemy2[enemy2Size - 1].inUse) {
                 enemy2[enemy2Size - 1].inUse = true;
@@ -362,11 +406,11 @@ window.onload = function(){
               enemy2.unshift(enemy2.pop());
             }
           }
-        }, parseInt(600));         
+        }, 600);         
         callFlag2 = true;
       };
     };
-    if(nowNum2 >= 2) {
+    if(nowNum2 >= difficult.b) {
       callFlag2 = false;
       clearInterval(headle2);
     };
@@ -392,7 +436,7 @@ window.onload = function(){
     var nowNumBTemp = nowNumB;
     for (var j = 0; j < nowNumBTemp; j++){
       var flag = false;
-      for (var i = 0; i < nowNum2; i++) {
+      for (var i = 0; i < nowNum1; i++) {
         if (bullets[j].x > enemy1[i].x - 4 && bullets[j].x < enemy1[i].x + 50 
           && bullets[j].y > enemy1[i].y && bullets[j].y < enemy1[i].y + 36) {
           bullets[j].clear();
@@ -448,7 +492,7 @@ window.onload = function(){
           bullets[0].y =hero.y - 20;
         }
         callFlagB = false;
-      }, parseInt(150)); 
+      }, Math.floor(150)); 
       callFlagB = true;        
     }    
   };
@@ -480,12 +524,9 @@ window.onload = function(){
         }; 
       }
     } else {
-      if (heroReady[parseInt(hero.times/2)]){
-        ctx.drawImage(heroImg[parseInt(hero.times/2)], hero.x, hero.y);
-        if(hero.times++ > 6) {
-          alert('Game over');
-          initGame();
-        }
+      if (heroReady[Math.floor(hero.times/2)]){
+        ctx.drawImage(heroImg[Math.floor(hero.times/2)], hero.x, hero.y);
+        hero.times++;
       }     
     }
     //render enemy1
@@ -497,13 +538,13 @@ window.onload = function(){
             ctx.drawImage(enemy1Img[0], enemy1[i].x, enemy1[i].y);            
           }
         }else {
-          if (enemy1Ready[parseInt(enemy1[i].times/2) + 1]){
-            ctx.drawImage(enemy1Img[parseInt(enemy1[i].times/2) + 1], enemy1[i].x, enemy1[i].y);
+          if (enemy1Ready[Math.floor(enemy1[i].times/2) + 1]){
+            ctx.drawImage(enemy1Img[Math.floor(enemy1[i].times/2) + 1], enemy1[i].x, enemy1[i].y);
             if(enemy1[i].times++ > 6) {
               enemy1[i].times = 0;
               enemy1[i].down = false;
               enemy1[i].clear();
-              enemy1[i].life = 1;
+              enemy1[i].life = 2;
               enemy1.push(enemy1.splice(i, 1)[0]);   
             }            
           }
@@ -519,13 +560,13 @@ window.onload = function(){
             ctx.drawImage(enemy2Img[0], enemy2[i].x, enemy2[i].y);
           }
         } else {
-          if (enemy2Ready[parseInt(enemy2[i].times/2) + 1]){
-            ctx.drawImage(enemy2Img[parseInt(enemy2[i].times/2) + 1], enemy2[i].x, enemy2[i].y);
+          if (enemy2Ready[Math.floor(enemy2[i].times/2) + 1]){
+            ctx.drawImage(enemy2Img[Math.floor(enemy2[i].times/2) + 1], enemy2[i].x, enemy2[i].y);
             if(enemy2[i].times++ > 6) {
               enemy2[i].times = 0;
               enemy2[i].down = false;
               enemy2[i].clear();
-              enemy2[i].life = 5;
+              enemy2[i].life = 7;
               enemy2.push(enemy2.splice(i, 1)[0]);   
             }            
           }
@@ -543,6 +584,10 @@ window.onload = function(){
     }
     ctx.font = "bold italic 16px Courier";
     ctx.fillText("Your score: "+ score, canvas.width - 170, 20);
+        if(hero.times > 7) {
+          alert('Game over');
+          initGame();
+        }
   };
   //主函数
   var main = function() {
