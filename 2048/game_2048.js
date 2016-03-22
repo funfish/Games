@@ -1,14 +1,3 @@
-//常用函数
-// 为element增加一个样式名为newClassName的新样式
-function addClass(element, newClassName) {
-	    element.className +=''+ newClassName;
-};
-
-// 移除element中的样式oldClassName
-function removeClass(element, oldClassName) {
-	    element.className = element.className.replace(/oldClassName/,'')
-};
-
 var game = function () {
 	this.a=1;
 	this.failFlag = 0;
@@ -21,6 +10,7 @@ game.prototype = {
 		//游戏开始标识职位
 		this.run();
 	},
+	//每操作一步之后增加1个棋子同时初始化增加两个棋子，并同时检查胜负
 	addNumber: function() {
 		var nullArr = [], num = 0;
 		var li = document.getElementsByTagName('li');
@@ -31,7 +21,6 @@ game.prototype = {
 				if (li[i].innerHTML == '2048') this.successFlag = 1;
 			}
 		};
-		console.log(nullArr.length)
 		var select = Math.floor((Math.random()*nullArr.length));
 		if (nullArr.length < 16 && nullArr.length > 0) {
 			nullArr[select].innerHTML = 2;
@@ -51,7 +40,10 @@ game.prototype = {
 	},
 	status: function() {
 		if (this.successFlag == 1) alert('win');
-		if (this.failFlag == 1) alert('fail');
+		if (this.failFlag == 1) {
+			alert('Game over');
+			this.reset()
+		}
 	},
 	run: function() {
 		var that = this;
@@ -60,19 +52,19 @@ game.prototype = {
 			var key = e.keyCode || e.charCode;
 			switch (key) {
 				case 37:
-					that.left();
+					that.calc(5, 1, true);
 					that.addNumber();
 					break;
 				case 38:
-					that.up();
+					that.calc(1, 5, true);
 					that.addNumber();
 					break;
 				case 39:
-					that.right();
+					that.calc(5, 1, false);
 					that.addNumber();
 					break;
 				case 40:
-					that.down();
+					that.calc(1, 5, false);
 					that.addNumber();
 					break;
 				default: console.log('Please select direction')
@@ -80,6 +72,7 @@ game.prototype = {
 			that.status();
 		};
 	},
+	//获取游戏中的，每个格子的数据，从做到右
 	getValue: function() {
 		var li = document.getElementsByTagName('li');
 		var value = [];
@@ -90,114 +83,58 @@ game.prototype = {
 		};
 		return value
 	},
-	same: function(x, y) {
-		if (x == y) return x + y
-	},
-	left: function() {
+	//通过a,b，dir，来判断上下左右键
+	calc: function(a, b, dir) {
 		var oValue = this.getValue();
 		for(var i = 0; i < 4; i++) {
 			var cValue = [];
 			var successNum = 0;
 			for(var j = 0; j < 4 ; j++) {
-				var temp = oValue[i*4+j];
+				var temp = a > b ? oValue[i*4+j] : oValue[i+j*4];
 				if (temp > 0) {					
 					cValue.push(temp);
 				};
+				document.getElementsByTagName('li')[i*a + j*b + 1].innerHTML = '';
+			};
+			if (dir) {
+				var site;
+				for(j = 0; j < cValue.length; j++) {
+					site = i*a + (j - successNum)*b + 1;
+					if (cValue[j] == cValue[j + 1]) {
+						document.getElementsByTagName('li')[site].innerHTML = parseInt(cValue[j]) + parseInt(cValue[j]);
+						successNum++;
+						j++;					
+					} else {
+						document.getElementsByTagName('li')[site].innerHTML = cValue[j];					
+					}
+				}			
+			} else {
+				var tempL = cValue.length, site;
+				for(var j = tempL - 1; j >= 0; j--) {
+					site = i*a + (j + successNum - tempL + 4)*b +1;
+					if (cValue[j] == cValue[j - 1]) {
+						document.getElementsByTagName('li')[site].innerHTML = parseInt(cValue[j]) + parseInt(cValue[j]);
+						successNum++;
+						j--;					
+					} else {
+						document.getElementsByTagName('li')[site].innerHTML = cValue[j];
+					}
+				}			
+			}
+		}
+	},
+	//重新初始化
+	reset: function() {
+		for(var i = 0; i < 4; i++) {
+			for(var j = 0; j < 4 ; j++) {
 				document.getElementsByTagName('li')[i*5 + j + 1].innerHTML = '';
 			};
-			var site;
-			for(j = 0; j < cValue.length; j++) {
-				site = i*5 + j + 1 - successNum;
-				if (cValue[j] == cValue[j + 1]) {
-					document.getElementsByTagName('li')[site].innerHTML = parseInt(cValue[j]) + parseInt(cValue[j]);
-					successNum++;
-					j++;					
-				} else {
-					document.getElementsByTagName('li')[site].innerHTML = cValue[j];					
-				}
-			}
 		}
-	},
-	up: function() {
-		var oValue = this.getValue();		
-		for(var i = 0; i < 4; i++) {
-			var cValue = [];
-			var successNum = 0;
-			for(var j = 0; j < 4 ;j++) {
-				var temp = oValue[j*4+i];
-				if (temp > 0) {					
-					cValue.push(temp);
-				};
-				document.getElementsByTagName('li')[j*5 + i + 1].innerHTML = '';
-			};
-			var site;
-			for(j = 0; j < cValue.length; j++) {
-				site = (j - successNum)*5 + i + 1;
-				if (cValue[j] == cValue[j + 1]) {
-					document.getElementsByTagName('li')[site].innerHTML = parseInt(cValue[j]) + parseInt(cValue[j]);
-					successNum++;
-					j++;					
-				} else {
-					document.getElementsByTagName('li')[site].innerHTML = cValue[j];					
-				}
-			}
-		}
-	},
-	right: function() {
-		var oValue = this.getValue();		
-		for(var i = 0; i < 4; i++) {
-			var cValue = [];
-			var successNum = 0;
-			for(var j = 0; j < 4 ;j++) {
-				var temp = oValue[i*4+j];
-				if (temp > 0) {					
-					cValue.push(temp);
-				};
-				document.getElementsByTagName('li')[i*5 + j + 1].innerHTML = '';
-			}
-			var tempL = cValue.length, site;
-			for(var j = tempL - 1; j >= 0; j--) {
-				site = i*5 + j +5 - tempL + successNum;
-				if (cValue[j] == cValue[j - 1]) {
-					document.getElementsByTagName('li')[site].innerHTML = parseInt(cValue[j]) + parseInt(cValue[j]);
-					successNum++;
-					j--;					
-				} else {
-					document.getElementsByTagName('li')[site].innerHTML = cValue[j];
-				}
-			}
-		}
-	},
-	down: function() {
-		var oValue = this.getValue();
-		for(var i = 0; i < 4; i++) {
-			var cValue = [];
-			var successNum = 0;
-			for(var j = 0; j < 4 ;j++) {
-				var temp = oValue[j*4+i];
-				if (temp > 0) {					
-					cValue.push(temp);
-				};
-				document.getElementsByTagName('li')[j*5 + i + 1].innerHTML = '';
-			};
-			var tempL = cValue.length, site;
-			for(j = tempL - 1; j >= 0; j--) {
-				site = (4 - cValue.length + j + successNum)*5 + i + 1;
-				if (cValue[j] == cValue[j - 1]) {
-					document.getElementsByTagName('li')[site].innerHTML = parseInt(cValue[j]) + parseInt(cValue[j]);
-					successNum++;
-					j--;					
-				} else {
-					document.getElementsByTagName('li')[site].innerHTML = cValue[j];					
-				}
-			}
-		}
+		this.addNumber();
 	}
 }
 
-
-
 window.onload = function() {
-	var game2 = new game();
-	game2.init()
+	var game2048 = new game();
+	game2048.init()
 }
